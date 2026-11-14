@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Shared by every environment. Changes here reach an environment only when
+# Kargo promotes them there (each env deploys from its own env/kz-<stage> branch).
+# The chart version is written by Kargo on promotion.
+helmCharts:
+  - name: podinfo
+    repo: http://10.43.200.201:8080
+    version: 6.15.0
+    releaseName: podinfo
+    valuesFile: values.yaml
+    skipTests: true
+resources:
+  - servicemonitor.yaml
+  - traffic-generator.yaml
