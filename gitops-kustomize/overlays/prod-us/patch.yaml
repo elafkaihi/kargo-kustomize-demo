@@ -1,0 +1,14 @@
+# What makes prod-us different from the base.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: podinfo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#b9770e"
