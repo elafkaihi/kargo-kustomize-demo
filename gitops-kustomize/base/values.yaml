@@ -1,0 +1,21 @@
+# Shared Helm values for podinfo, same for every environment.
+# Per-env differences are Kustomize patches in overlays/<env>/.
+fullnameOverride: podinfo
+replicaCount: 1
+logLevel: info
+image:
+  repository: 10.43.200.200:5000/podinfo
+  tag: 6.15.0 # placeholder; each overlay's images: sets the real tag (written by Kargo)
+ui:
+  message: "Kustomize config v1"
+  color: "#34577c"
+# Our own ServiceMonitor (servicemonitor.yaml) works in whatever namespace the
+# overlay sets; the chart's one hard-codes the namespace at render time.
+serviceMonitor:
+  enabled: false
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi
