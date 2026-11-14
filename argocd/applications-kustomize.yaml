@@ -1,0 +1,94 @@
+# One Argo CD Application per environment of the kargo-kustomize project.
+# Each reads its own branch (env/kz-<stage>), written only by Kargo promotions.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kz-dev
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-kustomize:dev
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    targetRevision: env/kz-dev
+    path: gitops-kustomize/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kz-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kz-staging
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-kustomize:staging
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    targetRevision: env/kz-staging
+    path: gitops-kustomize/overlays/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kz-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kz-prod-eu
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-kustomize:prod-eu
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    targetRevision: env/kz-prod-eu
+    path: gitops-kustomize/overlays/prod-eu
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kz-prod-eu
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kz-prod-us
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-kustomize:prod-us
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    targetRevision: env/kz-prod-us
+    path: gitops-kustomize/overlays/prod-us
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kz-prod-us
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

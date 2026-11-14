@@ -1,0 +1,68 @@
+# Branch-per-environment promotion, the standard Kargo pattern for base/overlays:
+# take gitops-kustomize/ exactly as it was in the Freight's commit, set the
+# image tag (overlay) and chart version (base), and commit that snapshot to the
+# env's own branch env/kz-<stage>. Each Argo CD app reads only its branch, so a
+# change to base/ reaches an environment only when it is promoted there.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promote
+  namespace: kargo-kustomize
+spec:
+  vars:
+    - name: gitRepo
+    - name: imageRepo
+    - name: chartRepo
+    - name: envBranch
+      value: env/kz-${{ ctx.stage }}
+  steps:
+    - uses: git-clone
+      retry:
+        errorThreshold: 3   # survive a network blip (e.g. laptop Wi-Fi reconnect)
+      config:
+        repoURL: ${{ vars.gitRepo }}
+        checkout:
+          - commit: ${{ commitFrom(vars.gitRepo).ID }}   # the Freight's config
+            path: ./src
+          - branch: ${{ vars.envBranch }}               # where we write
+            create: true
+            path: ./out
+    - uses: git-clear
+      config:
+        path: ./out
+    - uses: copy
+      config:
+        inPath: ./src/gitops-kustomize
+        outPath: ./out/gitops-kustomize
+    - uses: kustomize-set-image
+      config:
+        path: ./out/gitops-kustomize/overlays/${{ ctx.stage }}
+        images:
+          - image: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+    - uses: yaml-update
+      config:
+        path: ./out/gitops-kustomize/base/kustomization.yaml
+        updates:
+          - key: helmCharts.0.version
+            value: ${{ chartFrom(vars.chartRepo, "podinfo").Version }}
+    - uses: git-commit
+      config:
+        path: ./out
+        message: >-
+          ${{ ctx.stage }}: image ${{ imageFrom(vars.imageRepo).Tag }},
+          chart ${{ chartFrom(vars.chartRepo, "podinfo").Version }},
+          config ${{ commitFrom(vars.gitRepo).ID }}
+    - uses: git-push
+      as: push
+      retry:
+        errorThreshold: 3
+      config:
+        path: ./out
+    - uses: argocd-update
+      config:
+        apps:
+          - name: kz-${{ ctx.stage }}
+            sources:
+              - repoURL: ${{ vars.gitRepo }}
+                desiredRevision: ${{ task.outputs.push.commit }}

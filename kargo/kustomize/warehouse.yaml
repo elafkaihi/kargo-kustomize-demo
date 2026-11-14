@@ -1,0 +1,27 @@
+# Freight = image + chart + a commit of gitops-kustomize/ on main.
+# Kargo writes only to the env/kz-* branches, so its commits never create Freight.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: podinfo
+  namespace: kargo-kustomize
+spec:
+  interval: 1m
+  subscriptions:
+    - image:
+        repoURL: 10.43.200.200:5000/podinfo
+        imageSelectionStrategy: SemVer
+        constraint: ^6.0.0
+        discoveryLimit: 10
+    - chart:
+        repoURL: http://10.43.200.201:8080
+        name: podinfo
+        semverConstraint: ^6.0.0
+        discoveryLimit: 10
+    - git:
+        repoURL: https://github.com/elafkaihi/kargo-kustomize-demo.git
+        branch: main
+        commitSelectionStrategy: NewestFromBranch
+        includePaths:
+          - gitops-kustomize
+        discoveryLimit: 10

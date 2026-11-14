@@ -1,0 +1,14 @@
+# What makes staging different from the base.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+        - name: podinfo
+          env:
+            - name: PODINFO_UI_COLOR
+              value: "#6c3483"

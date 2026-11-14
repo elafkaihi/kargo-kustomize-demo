@@ -1,0 +1,76 @@
+# In-cluster Helm chart repository (plays "the team's chart repo").
+# - Kargo and Argo CD read it at http://10.43.200.201:8080 (fixed ClusterIP).
+# - The host uploads charts to localhost:5001 (NodePort 30501 mapped by k3d).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chartmuseum
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: chartmuseum
+  namespace: chartmuseum
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chartmuseum
+  namespace: chartmuseum
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: chartmuseum
+  template:
+    metadata:
+      labels:
+        app: chartmuseum
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: chartmuseum
+          image: ghcr.io/helm/chartmuseum:v0.15.0
+          env:
+            - name: STORAGE
+              value: local
+            - name: STORAGE_LOCAL_ROOTDIR
+              value: /charts
+            - name: DISABLE_API
+              value: "false"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+          volumeMounts:
+            - name: charts
+              mountPath: /charts
+      volumes:
+        - name: charts
+          persistentVolumeClaim:
+            claimName: chartmuseum
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chartmuseum
+  namespace: chartmuseum
+spec:
+  type: NodePort
+  clusterIP: 10.43.200.201
+  selector:
+    app: chartmuseum
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30501

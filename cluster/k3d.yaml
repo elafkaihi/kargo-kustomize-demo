@@ -1,0 +1,33 @@
+# k3d cluster for the Kargo + Argo CD demo.
+# Fixed localhost ports are mapped to NodePorts on the server node.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: kargo-demo
+servers: 1
+agents: 0
+image: rancher/k3s:v1.34.13-k3s1
+ports:
+  - port: 127.0.0.1:8080:30080   # Argo CD UI
+    nodeFilters: [server:0]
+  - port: 127.0.0.1:8081:30081   # Kargo UI / API
+    nodeFilters: [server:0]
+  - port: 127.0.0.1:9090:30090   # Prometheus
+    nodeFilters: [server:0]
+  - port: 127.0.0.1:5000:30500   # demo image registry (push side)
+    nodeFilters: [server:0]
+  - port: 127.0.0.1:5001:30501   # demo Helm chart repo (upload side)
+    nodeFilters: [server:0]
+options:
+  k3s:
+    extraArgs:
+      - arg: --disable=traefik
+        nodeFilters: [server:*]
+# The demo registry runs in-cluster on a fixed ClusterIP (see platform/registry.yaml).
+# containerd on the node pulls from it over plain HTTP.
+registries:
+  config: |
+    mirrors:
+      "10.43.200.200:5000":
+        endpoint:
+          - http://10.43.200.200:5000

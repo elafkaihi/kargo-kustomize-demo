@@ -1,0 +1,137 @@
+# Pipeline: dev -> staging -> { prod-eu, prod-us }  (prod Stages are independent of each other)
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: kargo-kustomize
+spec:
+  vars:
+    - name: gitRepo
+      value: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    - name: imageRepo
+      value: 10.43.200.200:5000/podinfo
+    - name: chartRepo
+      value: http://10.43.200.201:8080
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: podinfo
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote
+  verification:
+    analysisTemplates:
+      - name: podinfo-health
+        kind: ClusterAnalysisTemplate
+    args:
+      - name: namespace
+        value: kz-${{ ctx.stage }}
+      - name: tag
+        value: ${{ imageFrom(vars.imageRepo).Tag }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: staging
+  namespace: kargo-kustomize
+spec:
+  vars:
+    - name: gitRepo
+      value: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    - name: imageRepo
+      value: 10.43.200.200:5000/podinfo
+    - name: chartRepo
+      value: http://10.43.200.201:8080
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: podinfo
+      sources:
+        stages: [dev]
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote
+  verification:
+    analysisTemplates:
+      - name: podinfo-health
+        kind: ClusterAnalysisTemplate
+    args:
+      - name: namespace
+        value: kz-${{ ctx.stage }}
+      - name: tag
+        value: ${{ imageFrom(vars.imageRepo).Tag }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod-eu
+  namespace: kargo-kustomize
+spec:
+  vars:
+    - name: gitRepo
+      value: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    - name: imageRepo
+      value: 10.43.200.200:5000/podinfo
+    - name: chartRepo
+      value: http://10.43.200.201:8080
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: podinfo
+      sources:
+        stages: [staging]
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote
+  verification:
+    analysisTemplates:
+      - name: podinfo-health
+        kind: ClusterAnalysisTemplate
+    args:
+      - name: namespace
+        value: kz-${{ ctx.stage }}
+      - name: tag
+        value: ${{ imageFrom(vars.imageRepo).Tag }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prod-us
+  namespace: kargo-kustomize
+spec:
+  vars:
+    - name: gitRepo
+      value: https://github.com/elafkaihi/kargo-kustomize-demo.git
+    - name: imageRepo
+      value: 10.43.200.200:5000/podinfo
+    - name: chartRepo
+      value: http://10.43.200.201:8080
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: podinfo
+      sources:
+        stages: [staging]
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promote
+  verification:
+    analysisTemplates:
+      - name: podinfo-health
+        kind: ClusterAnalysisTemplate
+    args:
+      - name: namespace
+        value: kz-${{ ctx.stage }}
+      - name: tag
+        value: ${{ imageFrom(vars.imageRepo).Tag }}

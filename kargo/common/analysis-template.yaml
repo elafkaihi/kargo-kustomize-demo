@@ -1,0 +1,74 @@
+# Verification run by Kargo after every promotion (an Argo Rollouts AnalysisRun).
+# Cluster-scoped so both Kargo projects share it.
+#
+# Both queries only look at pods running the exact tag being verified
+# (joined through kube-state-metrics), so leftover metrics from the previous
+# version cannot make a bad release look healthy.
+#
+# Tunables (defaults below; override per Stage under spec.verification.args):
+#   interval x count = how long verification takes (default 5 x 20s after a 60s delay;
+#   the delay guarantees a full 1m rate() window, even in a brand-new namespace)
+#   min-success-rate, max-p95-seconds = the pass/fail thresholds
+apiVersion: argoproj.io/v1alpha1
+kind: ClusterAnalysisTemplate
+metadata:
+  name: podinfo-health
+spec:
+  args:
+    - name: namespace
+    - name: tag
+    - name: prometheus-url
+      value: http://kps-prometheus.monitoring.svc:9090
+    - name: min-success-rate
+      value: "0.95"
+    - name: max-p95-seconds
+      value: "0.5"
+    - name: interval
+      value: 20s
+    - name: count
+      value: "5"
+  metrics:
+    # Share of non-5xx responses. No traffic at all gives an empty result or NaN,
+    # which counts as a failed measurement: we never pass what we cannot see.
+    - name: success-rate
+      initialDelay: 60s
+      interval: "{{args.interval}}"
+      count: "{{args.count}}"
+      failureLimit: 1
+      successCondition: len(result) > 0 && !isNaN(result[0]) && result[0] >= {{args.min-success-rate}}
+      provider:
+        prometheus:
+          address: "{{args.prometheus-url}}"
+          query: |
+            (
+              sum(
+                rate(http_request_duration_seconds_count{namespace="{{args.namespace}}", path!~".*(healthz|readyz|metrics).*", status!~"5.."}[1m])
+                * on(namespace, pod) group_left()
+                max by (namespace, pod) (kube_pod_container_info{namespace="{{args.namespace}}", container="podinfo", image=~".*:{{args.tag}}"})
+              ) or vector(0)
+            )
+            /
+            sum(
+              rate(http_request_duration_seconds_count{namespace="{{args.namespace}}", path!~".*(healthz|readyz|metrics).*"}[1m])
+              * on(namespace, pod) group_left()
+              max by (namespace, pod) (kube_pod_container_info{namespace="{{args.namespace}}", container="podinfo", image=~".*:{{args.tag}}"})
+            )
+    # p95 latency of application requests. NaN (no traffic) passes here
+    # because success-rate already fails in that case.
+    - name: p95-latency
+      initialDelay: 60s
+      interval: "{{args.interval}}"
+      count: "{{args.count}}"
+      failureLimit: 1
+      successCondition: len(result) == 0 || isNaN(result[0]) || result[0] <= {{args.max-p95-seconds}}
+      provider:
+        prometheus:
+          address: "{{args.prometheus-url}}"
+          query: |
+            histogram_quantile(0.95,
+              sum by (le) (
+                rate(http_request_duration_seconds_bucket{namespace="{{args.namespace}}", path!~".*(healthz|readyz|metrics).*"}[1m])
+                * on(namespace, pod) group_left()
+                max by (namespace, pod) (kube_pod_container_info{namespace="{{args.namespace}}", container="podinfo", image=~".*:{{args.tag}}"})
+              )
+            )

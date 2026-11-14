@@ -1,0 +1,31 @@
+# Just Prometheus + kube-state-metrics: enough for Kargo verification.
+fullnameOverride: kps
+grafana:
+  enabled: false
+alertmanager:
+  enabled: false
+nodeExporter:
+  enabled: false
+# k3s does not expose these components the way kubeadm does; scraping them only
+# produces "down" targets.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+defaultRules:
+  create: false
+prometheus:
+  service:
+    type: NodePort
+    nodePort: 30090
+  prometheusSpec:
+    scrapeInterval: 10s
+    evaluationInterval: 10s
+    retention: 6h
+    # Pick up ServiceMonitors from every namespace, whatever their labels.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false

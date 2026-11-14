@@ -1,0 +1,26 @@
+# Kargo project: true Kustomize layout (gitops-kustomize/: base + overlays).
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-kustomize
+---
+# Every promotion is manual.
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-kustomize
+  namespace: kargo-kustomize
+spec:
+  promotionPolicies:
+    - stageSelector:
+        name: dev
+      autoPromotionEnabled: false
+    - stageSelector:
+        name: staging
+      autoPromotionEnabled: false
+    - stageSelector:
+        name: prod-eu
+      autoPromotionEnabled: false
+    - stageSelector:
+        name: prod-us
+      autoPromotionEnabled: false

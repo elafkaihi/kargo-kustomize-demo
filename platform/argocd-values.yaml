@@ -1,0 +1,16 @@
+dex:
+  enabled: false
+notifications:
+  enabled: false
+applicationSet:
+  replicas: 1
+configs:
+  params:
+    server.insecure: true        # plain HTTP on localhost:8080
+  cm:
+    kustomize.buildOptions: --enable-helm
+    timeout.reconciliation: 60s
+server:
+  service:
+    type: NodePort
+    nodePortHttp: 30080

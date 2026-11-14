@@ -1,0 +1,12 @@
+# Admin password hash and token signing key are passed by scripts/up.sh (--set).
+api:
+  tls:
+    enabled: false               # plain HTTP on localhost:8081
+  service:
+    type: NodePort
+    nodePort: 30081
+controller:
+  reconcilers:
+    warehouses:
+      # Chart default is 5m and silently overrides the Warehouse's 1m interval.
+      minReconciliationInterval: 1m0s
